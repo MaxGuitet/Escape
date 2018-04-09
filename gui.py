@@ -35,6 +35,7 @@ class Application():
       y = self.tk.winfo_height() / 2)
 
     self.input.bind('<KeyRelease>', self.onKeyInput)
+    self.input.focus()
 
     self.state = False
     self.tk.bind("<F11>", self.toggle_fullscreen)
@@ -53,6 +54,7 @@ class Application():
   def center_horizontal(self, widget):
     self.tk.update_idletasks()
     widget.place(x = self.tk.winfo_width() / 2 - widget.winfo_width() / 2)
+    self.tk.update_idletasks()
     return "break"
 
   def onKeyInput(self, event):
@@ -64,9 +66,11 @@ class Application():
         self.center_horizontal(self.label)
       else:
         self.label['text'] = "Invalid code entered\nTry again"
+        self.input.config(state="disabled")
         self.center_horizontal(self.label)
         time.sleep(3)
         self.label['text'] = "Enter manual activation code"
+        self.input.config(state="normal")
         self.center_horizontal(self.label)
         self.codeString.set('')
 
