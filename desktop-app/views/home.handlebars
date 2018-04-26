@@ -1,0 +1,22 @@
+<div class="container">
+  <h1>S'Cape: Maître du jeu</h1>
+  <div class="form-group">
+    <div class="control-label">Envoyer un message</div>
+    <input type="text" class="form-control" id="messageContent" />
+  </div>
+  <button class="btn btn-default" id="sendButton">Envoyer</button>
+</div>
+
+<script>
+  document.getElementById('sendButton').addEventListener('click', function() {
+    fetch('/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: document.getElementById('messageContent').value,
+        }),
+      });
+  })
+</script>

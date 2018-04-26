@@ -2,6 +2,8 @@ import React from 'react';
 import { Alert, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Font, KeepAwake, Notifications, Permissions, ScreenOrientation } from 'expo';
 
+const DESKTOP_ENDPOINT = 'http://192.168.1.20:3000';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -74,9 +76,8 @@ export default class App extends React.Component {
         return;
       }
       const token = await Notifications.getExpoPushTokenAsync();
-      console.log(token);
 
-      await fetch('http://192.168.1.26:3000/send-token', {
+      await fetch(`${DESKTOP_ENDPOINT}/set-token`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
