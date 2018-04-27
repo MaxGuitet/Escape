@@ -1,6 +1,7 @@
+import io from 'socket.io-client';
 import React from 'react';
-import { Alert, StatusBar, StyleSheet, Text, View } from 'react-native';
-import { Font, KeepAwake, Notifications, Permissions, ScreenOrientation } from 'expo';
+import { StatusBar, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Font, KeepAwake, ScreenOrientation, Speech } from 'expo';
 
 const DESKTOP_ENDPOINT = 'http://192.168.1.20:3000';
 
@@ -41,11 +42,12 @@ export default class App extends React.Component {
       remainingTime: 3600,
     };
 
-    this.initializeNotifications = this.initializeNotifications.bind(this);
-    this.handleNotificationReceived = this.handleNotificationReceived.bind(this);
+    this.initializeSocket = this.initializeSocket.bind(this);
   }
 
   async componentWillMount() {
+    this.initializeSocket();
+
     await Font.loadAsync({
       FreeMono: require('./assets/FreeMono.ttf'),
     });
@@ -54,49 +56,25 @@ export default class App extends React.Component {
 
     ScreenOrientation.allow(ScreenOrientation.Orientation.LANDSCAPE_LEFT);
     StatusBar.setHidden(true);
-    setInterval(() => {
-      this.setState({ remainingTime: this.state.remainingTime - 1 });
-    }, 1000);
-
-    this.initializeNotifications();
-  }
-
-  componentWillUnmount() {
-    return this.eventHandle && this.eventHandle.remove();
-  }
-
-  async initializeNotifications() {
-    try {
-      const { status } = await Permissions.getAsync(Permissions.NOTIFICATIONS);
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permissions manquante',
-          "L'application requiert les notifications pour fonctionner."
-        );
+    this.timer = setInterval(() => {
+      if (this.state.remainingTime === 0) {
+        clearInterval(this.timer);
+        Speech.speak("Évacuation d'urgence !", {
+          language: 'fr-FR',
+        });
         return;
       }
-      const token = await Notifications.getExpoPushTokenAsync();
-
-      await fetch(`${DESKTOP_ENDPOINT}/set-token`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-        }),
-      });
-    } catch (err) {
-      Alert.alert('Erreur', err.toString());
-    }
-
-    this.eventHandle = Notifications.addListener(this.handleNotificationReceived);
+      this.setState({ remainingTime: this.state.remainingTime - 1 });
+    }, 1000);
   }
 
-  handleNotificationReceived(notification) {
-    console.log(notification);
-    this.setState({ displayMessage: notification.data.message });
+  initializeSocket() {
+    this.socket = io(DESKTOP_ENDPOINT);
+
+    this.socket.on('mobile message', message => {
+      this.setState({ displayMessage: JSON.parse(message) });
+      Vibration.vibrate(1000);
+    });
   }
 
   render() {
