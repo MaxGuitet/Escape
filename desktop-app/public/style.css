@@ -1,0 +1,25 @@
+body {
+  overflow-y: hidden;
+}
+
+#error-handler {
+  position: absolute;
+  bottom: -100px;
+  left: 50%;
+  transition: all 0.3s ease-in-out;
+}
+
+#error-handler.active {
+  bottom: 30px;
+}
+
+#error-message {
+  position: relative;
+  left: -50%;
+  border-radius: 10px;
+  background: #dd2200dd;
+  padding: 15px 30px;
+  max-width: 400px;
+  text-align: center;
+  color: #fff;
+}
