@@ -1,9 +1,9 @@
 import io from 'socket.io-client';
 import React from 'react';
 import { StatusBar, StyleSheet, Text, Vibration, View } from 'react-native';
-import { Font, KeepAwake, ScreenOrientation, Speech } from 'expo';
+import { AppLoading, Audio, Font, KeepAwake, ScreenOrientation } from 'expo';
 
-const DESKTOP_ENDPOINT = 'http://192.168.1.20:3000';
+const DESKTOP_ENDPOINT = 'http://192.168.1.26:3000';
 
 const styles = StyleSheet.create({
   container: {
@@ -42,6 +42,9 @@ export default class App extends React.Component {
       remainingTime: 3600,
     };
 
+    this.alarmSound = new Audio.Sound();
+    this.ringSound = new Audio.Sound();
+
     this.initializeSocket = this.initializeSocket.bind(this);
   }
 
@@ -52,28 +55,30 @@ export default class App extends React.Component {
       FreeMono: require('./assets/FreeMono.ttf'),
     });
 
+    await this.alarmSound.loadAsync(require('./assets/alarm.mp3'));
+    await this.ringSound.loadAsync(require('./assets/phone-ring.mp3'));
+
     this.setState({ isReady: true });
 
     ScreenOrientation.allow(ScreenOrientation.Orientation.LANDSCAPE_LEFT);
     StatusBar.setHidden(true);
-    this.timer = setInterval(() => {
-      if (this.state.remainingTime === 0) {
-        clearInterval(this.timer);
-        Speech.speak("Évacuation d'urgence !", {
-          language: 'fr-FR',
-        });
-        return;
-      }
-      this.setState({ remainingTime: this.state.remainingTime - 1 });
-    }, 1000);
   }
 
   initializeSocket() {
     this.socket = io(DESKTOP_ENDPOINT);
 
-    this.socket.on('mobile message', message => {
+    this.socket.on('app message', async message => {
       this.setState({ displayMessage: JSON.parse(message) });
       Vibration.vibrate(1000);
+      await this.ringSound.replayAsync();
+    });
+
+    this.socket.on('app timer updated', remainingTime => {
+      if (remainingTime === 0) {
+        this.alarmSound.playAsync();
+        return;
+      }
+      this.setState({ remainingTime });
     });
   }
 
@@ -87,7 +92,7 @@ export default class App extends React.Component {
     hours = hours < 10 ? `0${hours}` : hours;
 
     if (!isReady) {
-      return null;
+      return <AppLoading />;
     }
 
     return (
