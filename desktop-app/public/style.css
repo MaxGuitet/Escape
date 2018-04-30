@@ -2,18 +2,18 @@ body {
   overflow-y: hidden;
 }
 
-#error-handler {
+#errorHandler {
   position: absolute;
   bottom: -100px;
   left: 50%;
   transition: all 0.3s ease-in-out;
 }
 
-#error-handler.active {
+#errorHandler.active {
   bottom: 30px;
 }
 
-#error-message {
+#errorMessage {
   position: relative;
   left: -50%;
   border-radius: 10px;

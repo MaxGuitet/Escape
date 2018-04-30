@@ -1,4 +1,5 @@
 const http = require('http');
+const fs = require('fs');
 
 const express = require('express');
 const exphbs = require('express-handlebars');
@@ -45,7 +46,18 @@ app.get('/', function(req, res) {
   mainConnexion = req.sessionID;
 
   res.render('home', {
-    messages,
+    imagesList: function() {
+      try {
+        return fs.readdirSync('./images').map(function(fileName) {
+          return {
+            display: fileName,
+            encoded: encodeURIComponent(fileName),
+          };
+        });
+      } catch (err) {
+        return [];
+      }
+    },
   });
 });
 
@@ -62,6 +74,19 @@ function startTimer() {
 
 function stopTimer() {
   clearInterval(timer);
+}
+
+function calculatePNGDimensions(buffer) {
+  if (buffer.toString('ascii', 12, 16) === 'CgBI') {
+    return {
+      width: buffer.readUInt32BE(32),
+      height: buffer.readUInt32BE(36),
+    };
+  }
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  };
 }
 
 IO.on('connection', function(socket) {
@@ -84,6 +109,26 @@ IO.on('connection', function(socket) {
     stopTimer();
     app.locals.remainingTime = 3600;
     IO.emit('app timer updated', app.locals.remainingTime);
+  });
+
+  socket.on('send image', function(name) {
+    const fileName = decodeURIComponent(name);
+    if (!fs.existsSync(`./images/${fileName}`)) {
+      IO.emit('message error', 'Fichier non trouvé');
+      return;
+    }
+
+    try {
+      const fileBuffer = fs.readFileSync(`./images/${fileName}`);
+      const { height, width } = calculatePNGDimensions(fileBuffer);
+      IO.emit('app send image', {
+        fileBuffer,
+        height,
+        width,
+      });
+    } catch (err) {
+      IO.emit('message error', 'Fichier non trouvé');
+    }
   });
 });
 

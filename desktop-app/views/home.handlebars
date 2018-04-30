@@ -32,6 +32,11 @@
     </div>
     <div class="col-sm-6">
       <h4>Liste des photos disponibles</h4>
+      <ul>
+        {{#each imagesList}}
+          <li>{{display}} <button class="btn btn-link btn-image" data-image={{encoded}}>Envoyer</button></li>
+        {{/each}}
+      </ul>
     </div>
   </div>
 
@@ -40,93 +45,112 @@
 
 <script>
   const socket = io();
-  let isTimerRunning = false;
+let isTimerRunning = false;
 
-  const errorHandler = document.getElementById('errorHandler');
-  const errorMessage = document.getElementById('errorMessage');
-  const messageContent = document.getElementById('messageContent');
-  const resetTimerButton = document.getElementById('resetTimerButton');
-  const sendButton = document.getElementById('sendButton');
-  const timerButton = document.getElementById('timerButton');
-  const timerDisplay = document.getElementById('timerDisplay');
+const errorHandler = document.getElementById('errorHandler');
+const errorMessage = document.getElementById('errorMessage');
+const messageContent = document.getElementById('messageContent');
+const resetTimerButton = document.getElementById('resetTimerButton');
+const sendButton = document.getElementById('sendButton');
+const sendImageButton = document.getElementById('sendImageButton');
+const timerButton = document.getElementById('timerButton');
+const timerDisplay = document.getElementById('timerDisplay');
+const imageButtons = document.getElementsByClassName('btn-image') || [];
 
-  /**
-   * Helpers
-   */
-  function displayError(message) {
-    errorMessage.innerHTML = `Erreur : ${message}`;
-    errorHandler.classList.add('active');
-    setTimeout(function() {
-      errorHandler.classList.remove('active');
-    }, 5000);
-  }
+/**
+ * Helpers
+ */
+function displayError(message) {
+  errorMessage.innerHTML = `Erreur : ${message}`;
+  errorHandler.classList.add('active');
+  setTimeout(function() {
+    errorHandler.classList.remove('active');
+  }, 5000);
+}
 
-  /**
-   * Listeners
-   */
-  socket.on('messages updated', function(messages) {
-    location.reload();
-  });
+/**
+ * Listeners
+ */
+socket.on('messages updated', function(messages) {
+  location.reload();
+});
 
-  socket.on('message error', function(error) {
-    displayError(error);
-  });
+socket.on('message error', function(error) {
+  displayError(error);
+});
 
-  socket.on('app timer updated', function(remainingTime) {
-    let sec = remainingTime % 60;
-    sec = sec < 10 ? `0${sec}` : sec;
-    let min = Math.floor((remainingTime / 60) % 60);
-    min = min < 10 ? `0${min}` : min;
-    let hours = Math.floor(remainingTime / 3600);
-    hours = hours < 10 ? `0${hours}` : hours;
-    timerDisplay.innerHTML = `${hours}:${min}:${sec}`;
-  });
+socket.on('app timer updated', function(remainingTime) {
+  let sec = remainingTime % 60;
+  sec = sec < 10 ? `0${sec}` : sec;
+  let min = Math.floor((remainingTime / 60) % 60);
+  min = min < 10 ? `0${min}` : min;
+  let hours = Math.floor(remainingTime / 3600);
+  hours = hours < 10 ? `0${hours}` : hours;
+  timerDisplay.innerHTML = `${hours}:${min}:${sec}`;
+});
 
-  /**
-   * Emitters
-   */
-  function sendMessage() {
-    socket.emit('send message', messageContent.value, function(error) {
-      if (error) {
-        displayError(error);
-      } else {
-        messageContent.value = '';
-      }
-    });
-  }
-  function toggleTimer() {
-    socket.emit('toggle timer', function(error) {
-      console.log('foo');
-      if (error) {
-        displayError(error);
-        return;
-      }
-    });
-    isTimerRunning = !isTimerRunning;
-    timerButton.innerHTML = isTimerRunning
-      ? 'Arrêter le compte à rebours'
-      : 'Démarrer le compte à rebours';
-  }
-  function resetTimer() {
-    socket.emit('reset timer');
-    isTimerRunning = false;
-    timerButton.innerHTML = 'Démarrer le compte à rebours';
-  }
-
-  /**
-   * Events handlers
-   */
-  sendButton.addEventListener('click', sendMessage);
-
-  messageContent.addEventListener('keyup', function(evt) {
-    if (evt.ctrlKey && evt.keyCode === 13) {
-      sendMessage();
+/**
+ * Emitters
+ */
+function sendMessage() {
+  socket.emit('send message', messageContent.value, function(error) {
+    if (error) {
+      displayError(error);
+    } else {
+      messageContent.value = '';
     }
   });
+}
 
-  timerButton.addEventListener('click', toggleTimer);
+function toggleTimer() {
+  socket.emit('toggle timer', function(error) {
+    console.log('foo');
+    if (error) {
+      displayError(error);
+      return;
+    }
+  });
+  isTimerRunning = !isTimerRunning;
+  timerButton.innerHTML = isTimerRunning
+    ? 'Arrêter le compte à rebours'
+    : 'Démarrer le compte à rebours';
+}
 
-  resetTimerButton.addEventListener('click', resetTimer);
+function resetTimer() {
+  socket.emit('reset timer');
+  isTimerRunning = false;
+  timerButton.innerHTML = 'Démarrer le compte à rebours';
+}
 
-  messageContent.focus();
+function sendImage(imageName) {
+  if (typeof imageName !== 'string') {
+    displayError('Nom d\'image invalide');
+    return;
+  }
+  socket.emit('send image', imageName);
+}
+
+/**
+ * Events handlers
+ */
+sendButton.addEventListener('click', sendMessage);
+
+messageContent.addEventListener('keyup', function(evt) {
+  if (evt.ctrlKey && evt.keyCode === 13) {
+    sendMessage();
+  }
+});
+
+timerButton.addEventListener('click', toggleTimer);
+resetTimerButton.addEventListener('click', resetTimer);
+
+if (imageButtons.length > 0) {
+  for (let i = 0; i < imageButtons.length; i += 1) {
+    imageButtons[i].addEventListener('click', function(evt) {
+      sendImage(evt.target.getAttribute('data-image'));
+    });
+  }
+}
+
+messageContent.focus();
 </script>
