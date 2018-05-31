@@ -1,5 +1,18 @@
 {
   "expo": {
-    "sdkVersion": "26.0.0"
+    "icon": "./assets/logo-1024x1024.png",
+    "name": "Escape or not",
+    "orientation": "landscape",
+    "platforms": ["android"],
+    "privacy": "unlisted",
+    "sdkVersion": "26.0.0",
+    "slug": "escapeornot-mobile",
+    "version": "0.1.0",
+    "ios": {
+      "bundleIdentifier": "com.escapeornot.mobileapp"
+    },
+    "android": {
+      "package": "com.escapeornot.mobileapp"
+    }
   }
 }
