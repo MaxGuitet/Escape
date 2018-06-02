@@ -3,7 +3,9 @@
     "icon": "./assets/logo-1024x1024.png",
     "name": "Escape or not",
     "orientation": "landscape",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "privacy": "unlisted",
     "sdkVersion": "26.0.0",
     "slug": "escapeornot-mobile",
@@ -12,7 +14,15 @@
       "bundleIdentifier": "com.escapeornot.mobileapp"
     },
     "android": {
-      "package": "com.escapeornot.mobileapp"
-    }
+      "package": "com.escapeornot.mobileapp",
+      "publishBundlePath": "android/app/src/main/assets/shell-app.bundle",
+      "publishManifestPath": "android/app/src/main/assets/shell-app-manifest.json"
+    },
+    "isDetached": true,
+    "detach": {
+      "scheme": "exp760f4a1acc6b4fb889e23f498df33ae8",
+      "androidExpoViewUrl": "https://s3.amazonaws.com/exp-exponent-view-code/android-v2.4.0-sdk26.0.0-e63d9209-070c-4118-b06b-c60e82da0b66.tar.gz"
+    },
+    "scheme": "exp760f4a1acc6b4fb889e23f498df33ae8"
   }
 }
