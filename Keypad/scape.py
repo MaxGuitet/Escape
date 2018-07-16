@@ -1,4 +1,5 @@
 import time
+from subprocess import call
 from tkinter import *
 from tkinter.font import Font
 import RPi.GPIO as GPIO
@@ -167,7 +168,10 @@ class Board():
     def checkButtonPress(self, callback):
         if GPIO.input(buttonPIN) == 1 and window.codeOK == True:
             callback()
-            time.sleep(1)
+            # if after 5s button is still pressed, shut down
+            time.sleep(5)
+            if GPIO.input(buttonPIN) == 1:
+                call(['shutdown', 'now'])
 
 # Main
 GPIO.setmode(GPIO.BOARD)
