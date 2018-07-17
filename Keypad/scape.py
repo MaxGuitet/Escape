@@ -1,4 +1,5 @@
 import time
+from subprocess import call
 from tkinter import *
 from tkinter.font import Font
 import RPi.GPIO as GPIO
@@ -9,8 +10,6 @@ codeOK = "Code correct\nDémarrage du protocole d'exfiltration"
 codeIncorrect = "Code incorrect\nRéessayez"
 
 buttonPIN = 36
-redLED = 38
-greenLED = 40
 
 class Application():
     def __init__(self):
@@ -19,19 +18,20 @@ class Application():
         background = "#111"
         foreground = "#0D5"
 
-        self.fullScreen = False
-
-        # Configuring board inputs/outputs
-        GPIO.setup(redLED, GPIO.OUT)
-        GPIO.setup(greenLED, GPIO.OUT)
+        self.fullScreen = True
 
         # Configuring window
         self.tk.attributes("-zoomed", True)
         self.tk["background"] = background
+        self.tk.attributes("-fullscreen", self.fullScreen)
+        
+        self.mainFrame = Frame(self.tk)
+        self.mainFrame.config(background=background, cursor='none')
+        self.mainFrame.pack(fill=BOTH, expand=TRUE)
 
         # Configuring label
         self.label = Label(
-            self.tk,
+            self.mainFrame,
             text=enterCode,
             background=background,
             foreground=foreground,
@@ -44,7 +44,7 @@ class Application():
         self.frames = [None] * 4
         self.inputs = [None] * 4
         for i in range(4):
-            self.frames[i] = Frame(self.tk, bd=1, background=foreground)
+            self.frames[i] = Frame(self.mainFrame, bd=1, background=foreground)
             self.frames[i].pack()
             self.inputs[i] = Label(
                 self.frames[i],
@@ -76,13 +76,10 @@ class Application():
         self.codeOK = False
         self.codeString.set('')
         for i in range(4):
-            self.inputs[i]["text"] = '*'
+            self.inputs[i]["text"] = '.'
         self.tk.update_idletasks()
         self.label["text"] = enterCode
         self.center_horizontal(self.label)
-        self.setRedLed(1)
-        self.setGreenLed(0)
-
 
     def toggle_fullscreen(self, event=None):
         self.fullScreen = not self.fullScreen
@@ -93,17 +90,6 @@ class Application():
         self.fullScreen = False
         self.tk.attributes("-fullscreen", False)
         return "break"
-
-    def setRedLed(self, state):
-        if state != 0 and state != 1:
-            state = 0
-        GPIO.output(redLED, state)
-
-
-    def setGreenLed(self, state):
-        if state != 0 and state != 1:
-            state = 0
-        GPIO.output(greenLED, state)
 
     def center_horizontal(self, widget):
         self.tk.update_idletasks()
@@ -120,8 +106,6 @@ class Application():
                 self.label["text"] = codeOK
                 self.center_horizontal(self.label)
                 self.codeOK = True
-                self.setRedLed(0)
-                self.setGreenLed(1)
             else:
                 self.label["text"] = codeIncorrect
                 self.center_horizontal(self.label)
@@ -184,7 +168,10 @@ class Board():
     def checkButtonPress(self, callback):
         if GPIO.input(buttonPIN) == 1 and window.codeOK == True:
             callback()
-            time.sleep(1)
+            # if after 5s button is still pressed, shut down
+            time.sleep(5)
+            if GPIO.input(buttonPIN) == 1:
+                call(['shutdown', 'now'])
 
 # Main
 GPIO.setmode(GPIO.BOARD)
