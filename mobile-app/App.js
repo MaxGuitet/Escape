@@ -4,7 +4,7 @@ import { Image, StatusBar, StyleSheet, Text, Vibration, View } from 'react-nativ
 import { AppLoading, Audio, Font, KeepAwake, ScreenOrientation } from 'expo';
 import { Buffer } from 'buffer';
 
-const DESKTOP_ENDPOINT = 'http://192.168.1.26:3000';
+const DESKTOP_ENDPOINT = 'http://192.168.1.69:3000';
 
 const styles = StyleSheet.create({
   container: {
