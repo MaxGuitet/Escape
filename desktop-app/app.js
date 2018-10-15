@@ -48,15 +48,33 @@ app.get('/', function(req, res) {
   res.render('home', {
     imagesList: function() {
       try {
-        return fs.readdirSync('./images').map(function(fileName) {
+        return fs.readdirSync('./public/images').map(function(fileName) {
           return {
             display: fileName,
+            url: `/images/${fileName}`,
             encoded: encodeURIComponent(fileName),
           };
         });
       } catch (err) {
         return [];
       }
+    },
+    messages: function() {
+      return Array.from(messages).sort(
+        (messageA, messageB) => (messageA.time < messageB.time ? 1 : -1)
+      );
+    },
+    helpers: {
+      formatTime: function() {
+        if (!this.time) {
+          return '';
+        }
+        return `${this.time.getHours()}:${
+          this.time.getMinutes() < 10 ? '0' : ''
+        }${this.time.getMinutes()}:${
+          this.time.getSeconds() < 10 ? '0' : ''
+        }${this.time.getSeconds()}`;
+      },
     },
   });
 });
@@ -91,8 +109,11 @@ function calculatePNGDimensions(buffer) {
 
 IO.on('connection', function(socket) {
   socket.on('send message', function(message) {
-    messages.push(message);
-    IO.emit('messages updated', JSON.stringify(messages));
+    messages.push({
+      message,
+      time: new Date(),
+    });
+    IO.emit('messages updated');
     IO.emit('app message', JSON.stringify(message));
   });
 
@@ -113,25 +134,32 @@ IO.on('connection', function(socket) {
 
   socket.on('send image', function(name) {
     const fileName = decodeURIComponent(name);
-    if (!fs.existsSync(`./images/${fileName}`)) {
+    if (!fs.existsSync(`./public/images/${fileName}`)) {
       IO.emit('message error', 'Fichier non trouvé');
       return;
     }
 
     try {
-      const fileBuffer = fs.readFileSync(`./images/${fileName}`);
+      const fileBuffer = fs.readFileSync(`./public/images/${fileName}`);
       const { height, width } = calculatePNGDimensions(fileBuffer);
       IO.emit('app send image', {
         fileBuffer,
         height,
         width,
       });
+
+      messages.push({
+        message: `Image envoyée: ${fileName}`,
+        time: new Date(),
+      });
+      IO.emit('messages updated');
     } catch (err) {
-      IO.emit('message error', 'Fichier non trouvé');
+      IO.emit('message error', "Impossible d'envoyer le fichier");
     }
   });
 });
 
 server.listen(3000, function() {
-  console.log('Game master app listening on port 3000');
+  // eslint-disable-next-line no-console
+  console.log('Interface Maître du jeu accessible à http://localhost:3000');
 });

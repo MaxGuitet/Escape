@@ -23,3 +23,18 @@ body {
   text-align: center;
   color: #fff;
 }
+
+.list-scrollable {
+  overflow-y: auto;
+  height: calc(100vh - 280px);
+  padding-bottom: 20px;
+}
+
+.image-container {
+  width: 50px;
+}
+
+.game-image {
+  margin: auto;
+  width: 75px;
+}
