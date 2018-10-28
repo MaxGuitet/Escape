@@ -18,30 +18,31 @@
     <h1 class="text-center">EscapeOrNot: Maître du jeu</h1>
 
     <div class="row">
-      <div class="col-sm-6" ng-controller="MessageFormController as form">
+      <div class="col-sm-6" ng-controller="MessageFormController">
         <div class="form-group">
           <h4 class="control-label">Envoyer un message</h4>
-          <textarea ng-model="form.message" class="form-control" id="messageContent" rows="3">
+          <textarea ng-model="message" class="form-control" id="messageContent" rows="3">
           </textarea>
         </div>
         <p>
-          <button class="btn btn-default" id="sendButton" ng-click="form.sendMessage()">Envoyer</button>
+          <button class="btn btn-default" id="sendButton" ng-click="sendMessage()">Envoyer</button>
         </p>
 
       </div>
-      <div class="col-sm-6">
+
+      <div class="col-sm-6" ng-controller="CountDownController">
         <h4>Compte à rebours</h4>
-        <h3 id="timerDisplay">01:00:00</h3>
-        <button class="btn btn-default" id="timerButton">Démarrer le compte à rebours</button>
+        <h3 id="timerDisplay">{{timerDisplay}}</h3>
+        <button class="btn btn-default" id="timerButton" ng-click="toggleTimer()">{{timerButton}}</button>
         <button class="btn btn-danger" id="resetTimerButton">Réinitialiser</button>
       </div>
     </div>
 
     <div class="row">
-      <div class="col-sm-6" ng-controller="MessageHistoryController as messageHistory">
+      <div class="col-sm-6" ng-controller="MessageHistoryController">
         <h4>Historique des messages</h4>
         <ul id="messages-history" class="list-unstyled list-scrollable">
-          <li ng-repeat="message in messageHistory.messages"><b>{{messageHistory.formatTime(message.time)}}</b> : {{message.text}}</li>
+          <li ng-repeat="message in messages"><b>{{formatTime(message.time)}}</b> : {{message.text}}</li>
         </ul>
       </div>
       <div class="col-sm-6">
@@ -77,33 +78,9 @@ socket.on('message error', function(error) {
   displayError(error);
 });
 
-socket.on('app timer updated', function(remainingTime) {
-  let sec = remainingTime % 60;
-  sec = sec < 10 ? `0${sec}` : sec;
-  let min = Math.floor((remainingTime / 60) % 60);
-  min = min < 10 ? `0${min}` : min;
-  let hours = Math.floor(remainingTime / 3600);
-  hours = hours < 10 ? `0${hours}` : hours;
-  timerDisplay.innerHTML = `${hours}:${min}:${sec}`;
-});
-
 /**
  * Emitters
  */
-
-function toggleTimer() {
-  socket.emit('toggle timer', function(error) {
-    console.log('foo');
-    if (error) {
-      displayError(error);
-      return;
-    }
-  });
-  isTimerRunning = !isTimerRunning;
-  timerButton.innerHTML = isTimerRunning
-    ? 'Arrêter le compte à rebours'
-    : 'Démarrer le compte à rebours';
-}
 
 function resetTimer() {
   socket.emit('reset timer');
@@ -119,35 +96,30 @@ function sendImage(imageName) {
   socket.emit('send image', imageName);
 }
 
-gameMasterApp.controller('MessageFormController', function MessageFormController() {
-  var self = this;
+gameMasterApp.controller('MessageFormController', ['$scope', function MessageFormController($scope) {
+  $scope.message = '';
 
-
-  self.message = '';
-
-  self.sendMessage = function() {
-    console.log(this.message)
-    socket.emit('send message', self.message, function(error) {
+  $scope.sendMessage = function() {
+    socket.emit('send message', $scope.message, function(error) {
       if (error) {
-        // displayError(error);
+        console.log(error);
       } else {
-        self.message = '';
+        $scope.$apply(function() {
+          $scope.message = '';
+        });
       }
     });
   };
-});
+}]);
 
-gameMasterApp.controller('MessageHistoryController', function MessageHistoryController() {
-  this.messages = [];
-
-  var self = this;
+gameMasterApp.controller('MessageHistoryController', ['$scope', function MessageHistoryController($scope) {
+  $scope.messages = [];
 
   socket.on('messages updated', function(messages) {
-    console.log(messages)
-    self.messages = messages;
+    $scope.$apply(function() { $scope.messages = messages; })
   });
 
-  self.formatTime = function(time)  {
+  $scope.formatTime = function(time)  {
     if (!time) {
       return '';
     }
@@ -160,6 +132,41 @@ gameMasterApp.controller('MessageHistoryController', function MessageHistoryCont
       dateTime.getSeconds() < 10 ? '0' : ''
     }${dateTime.getSeconds()}`;
   };
-});
+}]);
+
+gameMasterApp.controller('CountDownController', ['$scope', function CountDownController($scope) {
+  $scope.timerDisplay = '01:00:00';
+  $scope.isTimerRunning = false;
+  $scope.timerButton = 'Démarrer le compte à rebours';
+
+  var setRemainingTime = function(remainingTime) {
+    let sec = remainingTime % 60;
+    sec = sec < 10 ? `0${sec}` : sec;
+    let min = Math.floor((remainingTime / 60) % 60);
+    min = min < 10 ? `0${min}` : min;
+    let hours = Math.floor(remainingTime / 3600);
+    hours = hours < 10 ? `0${hours}` : hours;
+    $scope.timerDisplay = `${hours}:${min}:${sec}`;
+  }
+
+  socket.on('app timer updated', function(remainingTime) {
+    $scope.$apply(setRemainingTime(remainingTime));
+  });
+
+  $scope.toggleTimer = function() {
+    socket.emit('toggle timer', function(error) {
+      if (error) {
+        displayError(error);
+        return;
+      }
+    });
+
+    $scope.isTimerRunning = !$scope.isTimerRunning;
+    $scope.timerButton = $scope.isTimerRunning
+      ? 'Arrêter le compte à rebours'
+      : 'Démarrer le compte à rebours';
+  };
+
+}]);
 </script>
 </html>

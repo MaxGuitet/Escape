@@ -108,13 +108,14 @@ function calculatePNGDimensions(buffer) {
 }
 
 IO.on('connection', function(socket) {
-  socket.on('send message', function(text) {
-    messages.push({
+  socket.on('send message', function(text, fn) {
+    messages.unshift({
       text,
       time: new Date(),
     });
     IO.emit('messages updated', messages);
     IO.emit('app message', JSON.stringify(text));
+    return fn && fn(null);
   });
 
   socket.on('toggle timer', function() {
@@ -148,8 +149,8 @@ IO.on('connection', function(socket) {
         width,
       });
 
-      messages.push({
-        text: `Image envoyée: ${fileName}`,
+      messages.unshift({
+        text: `Image envoyée : ${fileName}`,
         time: new Date(),
       });
       IO.emit('messages updated', messages);
