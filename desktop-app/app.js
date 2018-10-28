@@ -2,7 +2,6 @@ const http = require('http');
 const fs = require('fs');
 
 const express = require('express');
-const exphbs = require('express-handlebars');
 const session = require('express-session');
 const io = require('socket.io');
 
@@ -20,10 +19,9 @@ app.use(
   })
 );
 
+app.engine('html', require('ejs').renderFile);
 app.set('views', __dirname + '/views');
-app.set('view engine', 'handlebars');
-
-app.engine('handlebars', exphbs({ defaultLayout: 'main' }));
+app.set('view engine', 'html');
 
 const messages = [];
 let mainConnexion = null;
@@ -45,38 +43,40 @@ app.get('/', function(req, res) {
 
   mainConnexion = req.sessionID;
 
-  res.render('home', {
-    imagesList: function() {
-      try {
-        return fs.readdirSync('./public/images').map(function(fileName) {
-          return {
-            display: fileName,
-            url: `/images/${fileName}`,
-            encoded: encodeURIComponent(fileName),
-          };
-        });
-      } catch (err) {
-        return [];
-      }
-    },
-    messages: function() {
-      return Array.from(messages).sort(
-        (messageA, messageB) => (messageA.time < messageB.time ? 1 : -1)
-      );
-    },
-    helpers: {
-      formatTime: function() {
-        if (!this.time) {
-          return '';
-        }
-        return `${this.time.getHours()}:${
-          this.time.getMinutes() < 10 ? '0' : ''
-        }${this.time.getMinutes()}:${
-          this.time.getSeconds() < 10 ? '0' : ''
-        }${this.time.getSeconds()}`;
-      },
-    },
-  });
+  // res.render('home', {
+  //   imagesList: function() {
+  //     try {
+  //       return fs.readdirSync('./public/images').map(function(fileName) {
+  //         return {
+  //           display: fileName,
+  //           url: `/images/${fileName}`,
+  //           encoded: encodeURIComponent(fileName),
+  //         };
+  //       });
+  //     } catch (err) {
+  //       return [];
+  //     }
+  //   },
+  //   messages: function() {
+  //     return Array.from(messages).sort(
+  //       (messageA, messageB) => (messageA.time < messageB.time ? 1 : -1)
+  //     );
+  //   },
+  //   helpers: {
+  //     formatTime: function() {
+  //       if (!this.time) {
+  //         return '';
+  //       }
+  //       return `${this.time.getHours()}:${
+  //         this.time.getMinutes() < 10 ? '0' : ''
+  //       }${this.time.getMinutes()}:${
+  //         this.time.getSeconds() < 10 ? '0' : ''
+  //       }${this.time.getSeconds()}`;
+  //     },
+  //   },
+  // });
+
+  res.render('main');
 });
 
 function startTimer() {
@@ -108,13 +108,13 @@ function calculatePNGDimensions(buffer) {
 }
 
 IO.on('connection', function(socket) {
-  socket.on('send message', function(message) {
+  socket.on('send message', function(text) {
     messages.push({
-      message,
+      text,
       time: new Date(),
     });
-    IO.emit('messages updated');
-    IO.emit('app message', JSON.stringify(message));
+    IO.emit('messages updated', messages);
+    IO.emit('app message', JSON.stringify(text));
   });
 
   socket.on('toggle timer', function() {
@@ -149,10 +149,10 @@ IO.on('connection', function(socket) {
       });
 
       messages.push({
-        message: `Image envoyée: ${fileName}`,
+        text: `Image envoyée: ${fileName}`,
         time: new Date(),
       });
-      IO.emit('messages updated');
+      IO.emit('messages updated', messages);
     } catch (err) {
       IO.emit('message error', "Impossible d'envoyer le fichier");
     }

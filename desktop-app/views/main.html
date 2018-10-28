@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html ng-app="gameMasterApp">
+<head>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+      integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+      crossorigin="anonymous"
+    ></link>
+    <meta charset="utf-8">
+    <title>Interface Maître du Jeu</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./js/angular.js"></script>
+    <link rel="stylesheet" href="./style.css"></link>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">EscapeOrNot: Maître du jeu</h1>
+
+    <div class="row">
+      <div class="col-sm-6" ng-controller="MessageFormController as form">
+        <div class="form-group">
+          <h4 class="control-label">Envoyer un message</h4>
+          <textarea ng-model="form.message" class="form-control" id="messageContent" rows="3">
+          </textarea>
+        </div>
+        <p>
+          <button class="btn btn-default" id="sendButton" ng-click="form.sendMessage()">Envoyer</button>
+        </p>
+
+      </div>
+      <div class="col-sm-6">
+        <h4>Compte à rebours</h4>
+        <h3 id="timerDisplay">01:00:00</h3>
+        <button class="btn btn-default" id="timerButton">Démarrer le compte à rebours</button>
+        <button class="btn btn-danger" id="resetTimerButton">Réinitialiser</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-sm-6" ng-controller="MessageHistoryController as messageHistory">
+        <h4>Historique des messages</h4>
+        <ul id="messages-history" class="list-unstyled list-scrollable">
+          <li ng-repeat="message in messageHistory.messages"><b>{{messageHistory.formatTime(message.time)}}</b> : {{message.text}}</li>
+        </ul>
+      </div>
+      <div class="col-sm-6">
+        <h4>Liste des photos disponibles</h4>
+        <div class="list-scrollable">
+            <div ng-repeat="image in images" class="media">
+              <div class="media-left image-container">
+                <a href="#">
+                  <img class="media-object game-image" src="{{url}}" alt="{{display}}">
+                </a>
+              </div>
+              <div class="media-body">
+                {{display}}<button class="btn btn-link btn-image pull-right" data-image="{{encoded}}">Envoyer</button>
+              </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+<script>
+const socket = io();
+var gameMasterApp = angular.module('gameMasterApp', []);
+
+/**
+ * Listeners
+ */
+
+
+socket.on('message error', function(error) {
+  displayError(error);
+});
+
+socket.on('app timer updated', function(remainingTime) {
+  let sec = remainingTime % 60;
+  sec = sec < 10 ? `0${sec}` : sec;
+  let min = Math.floor((remainingTime / 60) % 60);
+  min = min < 10 ? `0${min}` : min;
+  let hours = Math.floor(remainingTime / 3600);
+  hours = hours < 10 ? `0${hours}` : hours;
+  timerDisplay.innerHTML = `${hours}:${min}:${sec}`;
+});
+
+/**
+ * Emitters
+ */
+
+function toggleTimer() {
+  socket.emit('toggle timer', function(error) {
+    console.log('foo');
+    if (error) {
+      displayError(error);
+      return;
+    }
+  });
+  isTimerRunning = !isTimerRunning;
+  timerButton.innerHTML = isTimerRunning
+    ? 'Arrêter le compte à rebours'
+    : 'Démarrer le compte à rebours';
+}
+
+function resetTimer() {
+  socket.emit('reset timer');
+  isTimerRunning = false;
+  timerButton.innerHTML = 'Démarrer le compte à rebours';
+}
+
+function sendImage(imageName) {
+  if (typeof imageName !== 'string') {
+    displayError('Nom d\'image invalide');
+    return;
+  }
+  socket.emit('send image', imageName);
+}
+
+gameMasterApp.controller('MessageFormController', function MessageFormController() {
+  var self = this;
+
+
+  self.message = '';
+
+  self.sendMessage = function() {
+    console.log(this.message)
+    socket.emit('send message', self.message, function(error) {
+      if (error) {
+        // displayError(error);
+      } else {
+        self.message = '';
+      }
+    });
+  };
+});
+
+gameMasterApp.controller('MessageHistoryController', function MessageHistoryController() {
+  this.messages = [];
+
+  var self = this;
+
+  socket.on('messages updated', function(messages) {
+    console.log(messages)
+    self.messages = messages;
+  });
+
+  self.formatTime = function(time)  {
+    if (!time) {
+      return '';
+    }
+
+    var dateTime = new Date(time);
+
+    return `${dateTime.getHours()}:${
+      dateTime.getMinutes() < 10 ? '0' : ''
+    }${dateTime.getMinutes()}:${
+      dateTime.getSeconds() < 10 ? '0' : ''
+    }${dateTime.getSeconds()}`;
+  };
+});
+</script>
+</html>
