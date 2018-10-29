@@ -43,40 +43,23 @@ app.get('/', function(req, res) {
 
   mainConnexion = req.sessionID;
 
-  // res.render('home', {
-  //   imagesList: function() {
-  //     try {
-  //       return fs.readdirSync('./public/images').map(function(fileName) {
-  //         return {
-  //           display: fileName,
-  //           url: `/images/${fileName}`,
-  //           encoded: encodeURIComponent(fileName),
-  //         };
-  //       });
-  //     } catch (err) {
-  //       return [];
-  //     }
-  //   },
-  //   messages: function() {
-  //     return Array.from(messages).sort(
-  //       (messageA, messageB) => (messageA.time < messageB.time ? 1 : -1)
-  //     );
-  //   },
-  //   helpers: {
-  //     formatTime: function() {
-  //       if (!this.time) {
-  //         return '';
-  //       }
-  //       return `${this.time.getHours()}:${
-  //         this.time.getMinutes() < 10 ? '0' : ''
-  //       }${this.time.getMinutes()}:${
-  //         this.time.getSeconds() < 10 ? '0' : ''
-  //       }${this.time.getSeconds()}`;
-  //     },
-  //   },
-  // });
-
   res.render('main');
+});
+
+app.get('/images-list', function(req, res) {
+  const list = fs.readdirSync('./public/images').map(function(fileName) {
+    return {
+      display: fileName,
+      url: `/images/${fileName}`,
+      encoded: encodeURIComponent(fileName),
+    };
+  });
+
+  res.send(list);
+});
+
+app.get('/messages-list', function(req, res) {
+  res.send(messages);
 });
 
 function startTimer() {
@@ -157,6 +140,11 @@ IO.on('connection', function(socket) {
     } catch (err) {
       IO.emit('message error', "Impossible d'envoyer le fichier");
     }
+  });
+
+  socket.on('clear history', function(cb) {
+    messages.length = 0;
+    return cb && cb();
   });
 });
 

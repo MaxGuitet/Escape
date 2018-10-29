@@ -8,20 +8,23 @@
       crossorigin="anonymous"
     ></link>
     <meta charset="utf-8">
-    <title>Interface Maître du Jeu</title>
+    <title>Escapeornot : Interface Maître du Jeu</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="./js/angular.js"></script>
+    <script src="./js/angular-animate.js"></script>
     <link rel="stylesheet" href="./style.css"></link>
 </head>
 <body>
   <div class="container">
-    <h1 class="text-center">EscapeOrNot: Maître du jeu</h1>
+    <div class="text-center">
+      <img width="200" src="/static-images/logo.png" />
+    </div>
 
     <div class="row">
       <div class="col-sm-6" ng-controller="MessageFormController">
         <div class="form-group">
           <h4 class="control-label">Envoyer un message</h4>
-          <textarea ng-model="message" class="form-control" id="messageContent" rows="3">
+          <textarea ng-model="message" ng-keyup="onKeyUp($event)" class="form-control" id="messageContent" rows="3">
           </textarea>
         </div>
         <p>
@@ -30,79 +33,86 @@
 
       </div>
 
-      <div class="col-sm-6" ng-controller="CountDownController">
+      <div class="col-sm-6" id="timerController" ng-controller="CountDownController">
         <h4>Compte à rebours</h4>
         <h3 id="timerDisplay">{{timerDisplay}}</h3>
         <button class="btn btn-default" id="timerButton" ng-click="toggleTimer()">{{timerButton}}</button>
-        <button class="btn btn-danger" id="resetTimerButton">Réinitialiser</button>
+        <button class="btn btn-danger" id="resetTimerButton" ng-click="resetTimer()">Réinitialiser</button>
       </div>
     </div>
 
     <div class="row">
       <div class="col-sm-6" ng-controller="MessageHistoryController">
-        <h4>Historique des messages</h4>
+        <h4>Historique des messages <div class="btn btn-xs btn-link" ng-click="clearHistory()">(Effacer)</div></h4>
         <ul id="messages-history" class="list-unstyled list-scrollable">
           <li ng-repeat="message in messages"><b>{{formatTime(message.time)}}</b> : {{message.text}}</li>
         </ul>
       </div>
-      <div class="col-sm-6">
+      <div class="col-sm-6" ng-controller="ImagesListController">
         <h4>Liste des photos disponibles</h4>
         <div class="list-scrollable">
             <div ng-repeat="image in images" class="media">
               <div class="media-left image-container">
-                <a href="#">
-                  <img class="media-object game-image" src="{{url}}" alt="{{display}}">
+                <a role="button" ng-click="sendImage(image.encoded)">
+                  <img class="media-object game-image" ng-src="{{image.url}}" alt="{{image.display}}">
                 </a>
               </div>
               <div class="media-body">
-                {{display}}<button class="btn btn-link btn-image pull-right" data-image="{{encoded}}">Envoyer</button>
+                {{image.display}}
+                <button class="btn btn-link btn-image pull-right" ng-click="sendImage(image.encoded)">Envoyer</button>
               </div>
             </div>
         </div>
       </div>
     </div>
   </div>
-
+  <div id="errorHandler" ng-controller="ErrorMessageController" ng-class="{selected: displayErrorBox === true}"><div id="errorMessage">{{errorMessage}}</div></div>
 </body>
 
 <script>
+/* global io angular */
 const socket = io();
-var gameMasterApp = angular.module('gameMasterApp', []);
+var gameMasterApp = angular.module('gameMasterApp', ['ngAnimate']);
 
-/**
- * Listeners
- */
+gameMasterApp.factory('errorMessageService', function($rootScope) {
+  var errorMessageService = {};
 
+  errorMessageService.showError = function(error) {
+    $rootScope.$broadcast('showError', error);
+  };
 
-socket.on('message error', function(error) {
-  displayError(error);
+  return errorMessageService;
 });
 
-/**
- * Emitters
- */
+gameMasterApp.controller('ErrorMessageController', ['$scope', 'errorMessageService', function ErrorMessageController($scope, errorMessageService) {
+  $scope.displayErrorBox = false;
 
-function resetTimer() {
-  socket.emit('reset timer');
-  isTimerRunning = false;
-  timerButton.innerHTML = 'Démarrer le compte à rebours';
-}
+  $scope.$on('showError', (evt, error) => {
+    $scope.displayErrorBox = true;
+    console.log('error thrown', error);
+  });
 
-function sendImage(imageName) {
-  if (typeof imageName !== 'string') {
-    displayError('Nom d\'image invalide');
-    return;
-  }
-  socket.emit('send image', imageName);
-}
+  socket.on('message error', function(error) {
+    errorMessageService.showError(error);
+  });
+}]);
 
-gameMasterApp.controller('MessageFormController', ['$scope', function MessageFormController($scope) {
+gameMasterApp.controller('MessageFormController', ['$scope', 'errorMessageService', function MessageFormController($scope, errorMessageService) {
   $scope.message = '';
 
+  $scope.onKeyUp = function(evt) {
+    if (evt.ctrlKey && evt.keyCode === 13) {
+      $scope.sendMessage();
+    }
+  }
+
   $scope.sendMessage = function() {
+    if (!$scope.message) {
+      return;
+    }
     socket.emit('send message', $scope.message, function(error) {
       if (error) {
-        console.log(error);
+        errorMessageService.showError(error);
       } else {
         $scope.$apply(function() {
           $scope.message = '';
@@ -112,11 +122,17 @@ gameMasterApp.controller('MessageFormController', ['$scope', function MessageFor
   };
 }]);
 
-gameMasterApp.controller('MessageHistoryController', ['$scope', function MessageHistoryController($scope) {
+gameMasterApp.controller('MessageHistoryController', ['$scope', '$http', function MessageHistoryController($scope, $http) {
   $scope.messages = [];
 
+  $http.get('/messages-list').then(function (response) {
+    if (response.status === 200) {
+      $scope.messages = response.data;
+    }
+  });
+
   socket.on('messages updated', function(messages) {
-    $scope.$apply(function() { $scope.messages = messages; })
+    $scope.$apply(function() { $scope.messages = messages; });
   });
 
   $scope.formatTime = function(time)  {
@@ -132,9 +148,17 @@ gameMasterApp.controller('MessageHistoryController', ['$scope', function Message
       dateTime.getSeconds() < 10 ? '0' : ''
     }${dateTime.getSeconds()}`;
   };
+
+  $scope.clearHistory = function() {
+    socket.emit('clear history', function() {
+      $scope.$apply(function() {
+        $scope.messages = [];
+      });
+    });
+  };
 }]);
 
-gameMasterApp.controller('CountDownController', ['$scope', function CountDownController($scope) {
+gameMasterApp.controller('CountDownController', ['$scope', 'errorMessageService', function CountDownController($scope, errorMessageService) {
   $scope.timerDisplay = '01:00:00';
   $scope.isTimerRunning = false;
   $scope.timerButton = 'Démarrer le compte à rebours';
@@ -147,7 +171,7 @@ gameMasterApp.controller('CountDownController', ['$scope', function CountDownCon
     let hours = Math.floor(remainingTime / 3600);
     hours = hours < 10 ? `0${hours}` : hours;
     $scope.timerDisplay = `${hours}:${min}:${sec}`;
-  }
+  };
 
   socket.on('app timer updated', function(remainingTime) {
     $scope.$apply(setRemainingTime(remainingTime));
@@ -156,7 +180,7 @@ gameMasterApp.controller('CountDownController', ['$scope', function CountDownCon
   $scope.toggleTimer = function() {
     socket.emit('toggle timer', function(error) {
       if (error) {
-        displayError(error);
+        errorMessageService.showError(error);
         return;
       }
     });
@@ -167,6 +191,31 @@ gameMasterApp.controller('CountDownController', ['$scope', function CountDownCon
       : 'Démarrer le compte à rebours';
   };
 
+  $scope.resetTimer = function() {
+    socket.emit('reset timer');
+    $scope.isTimerRunning = false;
+    $scope.timerButton = 'Démarrer le compte à rebours';
+  };
+}]);
+
+gameMasterApp.controller('ImagesListController', ['$scope', '$http', 'errorMessageService', function ImagesListController($scope, $http, errorMessageService) {
+  $scope.images = [];
+
+  $http.get('/images-list').then(function(response) {
+    if (response.status === 200) {
+      $scope.images = response.data;
+    }
+  });
+
+
+
+  $scope.sendImage = function(imageName) {
+    if (typeof imageName !== 'string') {
+      errorMessageService.showError('Nom d\'image invalide');
+      return;
+    }
+    socket.emit('send image', imageName);
+  };
 }]);
 </script>
 </html>

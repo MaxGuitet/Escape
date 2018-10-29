@@ -2,6 +2,10 @@ body {
   overflow-y: hidden;
 }
 
+textarea {
+  resize: vertical;
+}
+
 #errorHandler {
   position: absolute;
   bottom: -100px;
@@ -26,7 +30,7 @@ body {
 
 .list-scrollable {
   overflow-y: auto;
-  height: calc(100vh - 280px);
+  height: calc(100vh - 310px);
   padding-bottom: 20px;
 }
 

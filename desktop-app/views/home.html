@@ -100,36 +100,6 @@ socket.on('app timer updated', function(remainingTime) {
 /**
  * Emitters
  */
-function sendMessage() {
-  socket.emit('send message', messageContent.value, function(error) {
-    if (error) {
-      displayError(error);
-    } else {
-      messageContent.value = '';
-    }
-  });
-}
-
-function toggleTimer() {
-  socket.emit('toggle timer', function(error) {
-    console.log('foo');
-    if (error) {
-      displayError(error);
-      return;
-    }
-  });
-  isTimerRunning = !isTimerRunning;
-  timerButton.innerHTML = isTimerRunning
-    ? 'Arrêter le compte à rebours'
-    : 'Démarrer le compte à rebours';
-}
-
-function resetTimer() {
-  socket.emit('reset timer');
-  isTimerRunning = false;
-  timerButton.innerHTML = 'Démarrer le compte à rebours';
-}
-
 function sendImage(imageName) {
   if (typeof imageName !== 'string') {
     displayError('Nom d\'image invalide');
@@ -141,15 +111,12 @@ function sendImage(imageName) {
 /**
  * Events handlers
  */
-sendButton.addEventListener('click', sendMessage);
-
 messageContent.addEventListener('keyup', function(evt) {
   if (evt.ctrlKey && evt.keyCode === 13) {
     sendMessage();
   }
 });
 
-timerButton.addEventListener('click', toggleTimer);
 resetTimerButton.addEventListener('click', resetTimer);
 
 if (imageButtons.length > 0) {
