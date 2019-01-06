@@ -65,7 +65,7 @@ export default class App extends React.Component {
 
     this.setState({ isReady: true });
 
-    ScreenOrientation.allow(ScreenOrientation.Orientation.LANDSCAPE_LEFT);
+    await ScreenOrientation.allowAsync(ScreenOrientation.Orientation.LANDSCAPE_LEFT);
     StatusBar.setHidden(true);
   }
 

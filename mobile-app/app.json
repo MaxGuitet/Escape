@@ -7,10 +7,13 @@
       "android"
     ],
     "privacy": "unlisted",
-    "sdkVersion": "26.0.0",
+    "sdkVersion": "31.0.0",
     "slug": "escapeornot-mobile",
     "version": "0.1.0",
     "isDetached": false,
-    "scheme": "exp760f4a1acc6b4fb889e23f498df33ae8"
+    "scheme": "exp760f4a1acc6b4fb889e23f498df33ae8",
+    "android": {
+      "package": "com.escapeornot.mobile"
+    }
   }
 }
