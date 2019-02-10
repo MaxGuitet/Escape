@@ -17,7 +17,21 @@
       <h4>Compte à rebours</h4>
       <h3 id="timerDisplay">01:00:00</h3>
       <button class="btn btn-default" id="timerButton">Démarrer le compte à rebours</button>
-      <button class="btn btn-danger" id="resetTimerButton">Réinitialiser</button>
+    </div>
+    <div class="col-sm-6">
+      <h4>Metrre le compte à rebours à :</h4>
+      <form class="form-inline" id="setTimer">
+        <div class="form-group">
+          <input class="form-control" type="number" min="0" max="60" name="hours" id="setTimerHours" value="1">
+        </div>
+        <div class="form-group">
+          <input class="form-control" type="number" min="0" max="60" name="minutes" id="setTimerMinutes" value="0">
+        </div>
+        <div class="form-group">
+          <input class="form-control" type="number" min="0" max="60" name="seconds" id="setTimerSeconds" value="0">
+        </div>
+        <button class="btn btn-danger" type="submit">Réinitialiser</button>
+      </form>
     </div>
   </div>
 
@@ -64,6 +78,7 @@ const sendButton = document.getElementById('sendButton');
 const timerButton = document.getElementById('timerButton');
 const timerDisplay = document.getElementById('timerDisplay');
 const imageButtons = document.getElementsByClassName('btn-image') || [];
+const setTimer = document.getElementById('setTimer');
 
 /**
  * Helpers
@@ -112,7 +127,6 @@ function sendMessage() {
 
 function toggleTimer() {
   socket.emit('toggle timer', function(error) {
-    console.log('foo');
     if (error) {
       displayError(error);
       return;
@@ -122,12 +136,6 @@ function toggleTimer() {
   timerButton.innerHTML = isTimerRunning
     ? 'Arrêter le compte à rebours'
     : 'Démarrer le compte à rebours';
-}
-
-function resetTimer() {
-  socket.emit('reset timer');
-  isTimerRunning = false;
-  timerButton.innerHTML = 'Démarrer le compte à rebours';
 }
 
 function sendImage(imageName) {
@@ -150,7 +158,6 @@ messageContent.addEventListener('keyup', function(evt) {
 });
 
 timerButton.addEventListener('click', toggleTimer);
-resetTimerButton.addEventListener('click', resetTimer);
 
 if (imageButtons.length > 0) {
   for (let i = 0; i < imageButtons.length; i += 1) {
@@ -159,6 +166,21 @@ if (imageButtons.length > 0) {
     });
   }
 }
+
+setTimer.addEventListener('submit', function(evt) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  let hours = parseInt(document.getElementById('setTimerHours').value, 10)
+  hours = isNaN(hours) ? 0 : hours;
+  let minutes = parseInt(document.getElementById('setTimerMinutes').value, 10)
+  minutes = isNaN(minutes) ? 0 : minutes
+  let seconds = parseInt(document.getElementById('setTimerSeconds').value, 10)
+  seconds = isNaN(seconds) ? 0 : seconds;
+
+  socket.emit('reset timer', hours * 3600 + minutes * 60 + seconds);
+  isTimerRunning = false;
+  timerButton.innerHTML = 'Démarrer le compte à rebours';
+})
 
 messageContent.focus();
 </script>

@@ -126,9 +126,9 @@ IO.on('connection', function(socket) {
     app.locals.isTimerRunning = !app.locals.isTimerRunning;
   });
 
-  socket.on('reset timer', function() {
+  socket.on('reset timer', function(duration) {
     stopTimer();
-    app.locals.remainingTime = 3600;
+    app.locals.remainingTime = duration || 3600;
     IO.emit('app timer updated', app.locals.remainingTime);
   });
 
